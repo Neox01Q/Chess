@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chess Game with Click-to-Move</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background-color: #f4f4f4;
+        }
+        .chess-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .board-container {
+            display: flex;
+        }
+        .chess-board {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            grid-template-rows: repeat(8, 60px);
+            gap: 0;
+            border: 2px solid #333;
+        }
+        .chess-square {
+            width: 60px;
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 2rem;
+            cursor: pointer;
+        }
+        .chess-square.dark {
+            background-color: #b58863;
+        }
+        .chess-square.light {
+            background-color: #f0d9b5;
+        }
+        .chess-square.highlight {
+            outline: 3px solid #ff0000;
+        }
+        .coordinates {
+            display: grid;
+            grid-template-columns: repeat(8, 60px);
+            margin-top: 5px;
+        }
+        .coordinates div {
+            width: 60px;
+            text-align: center;
+            font-weight: bold;
+        }
+        .row-labels {
+            display: flex;
+            flex-direction: column;
+            margin-right: 5px;
+            justify-content: space-between;
+            height: 480px;
+        }
+        .row-labels div {
+            height: 60px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-weight: bold;
+        }
+        .button-container {
+            margin-top: 10px;
+        }
+        button {
+            padding: 8px 16px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+
+<div class="chess-container">
+    <div class="board-container">
+        <div class="row-labels">
+            <div>8</div>
+            <div>7</div>
+            <div>6</div>
+            <div>5</div>
+            <div>4</div>
+            <div>3</div>
+            <div>2</div>
+            <div>1</div>
+        </div>
+        <div class="chess-board" id="chessBoard"></div>
+    </div>
+    <div class="coordinates">
+        <div>A</div>
+        <div>B</div>
+        <div>C</div>
+        <div>D</div>
+        <div>E</div>
+        <div>F</div>
+        <div>G</div>
+        <div>H</div>
+    </div>
+    <div class="button-container">
+        <button id="undoButton">Undo Last Move</button>
+    </div>
+</div>
+
+<script>
+    const chessBoard = document.getElementById("chessBoard");
+    const undoButton = document.getElementById("undoButton");
+
+    // Initial board state
+    const boardState = {
+        "a1": { piece: "♖", color: "white" }, "b1": { piece: "♘", color: "white" }, "c1": { piece: "♗", color: "white" }, "d1": { piece: "♕", color: "white" }, "e1": { piece: "♔", color: "white" }, "f1": { piece: "♗", color: "white" }, "g1": { piece: "♘", color: "white" }, "h1": { piece: "♖", color: "white" },
+        "a2": { piece: "♙", color: "white" }, "b2": { piece: "♙", color: "white" }, "c2": { piece: "♙", color: "white" }, "d2": { piece: "♙", color: "white" }, "e2": { piece: "♙", color: "white" }, "f2": { piece: "♙", color: "white" }, "g2": { piece: "♙", color: "white" }, "h2": { piece: "♙", color: "white" },
+        "a8": { piece: "♖", color: "black" }, "b8": { piece: "♘", color: "black" }, "c8": { piece: "♗", color: "black" }, "d8": { piece: "♕", color: "black" }, "e8": { piece: "♔", color: "black" }, "f8": { piece: "♗", color: "black" }, "g8": { piece: "♘", color: "black" }, "h8": { piece: "♖", color: "black" },
+        "a7": { piece: "♙", color: "black" }, "b7": { piece: "♙", color: "black" }, "c7": { piece: "♙", color: "black" }, "d7": { piece: "♙", color: "black" }, "e7": { piece: "♙", color: "black" }, "f7": { piece: "♙", color: "black" }, "g7": { piece: "♙", color: "black" }, "h7": { piece: "♙", color: "black" }
+    };
+
+    let selectedSquare = null;
+    let moveHistory = [];
+
+    function createBoard() {
+        chessBoard.innerHTML = "";
+        for (let row = 8; row >= 1; row--) {
+            for (let col = 0; col < 8; col++) {
+                const squareId = `${String.fromCharCode(97 + col)}${row}`;
+                const square = document.createElement("div");
+                square.id = squareId;
+                square.classList.add("chess-square", (row + col) % 2 === 0 ? "light" : "dark");
+
+                if (boardState[squareId]) {
+                    square.textContent = boardState[squareId].piece;
+                    square.style.color = boardState[squareId].color === "white" ? "#fff" : "#000";
+                }
+
+                square.addEventListener("click", () => handleSquareClick(squareId));
+                chessBoard.appendChild(square);
+            }
+        }
+    }
+
+    function handleSquareClick(squareId) {
+        if (selectedSquare === squareId) {
+            // Deselect the square if clicked twice
+            selectedSquare = null;
+            createBoard();
+            return;
+        }
+
+        if (selectedSquare) {
+            const piece = boardState[selectedSquare];
+
+            if (piece) {
+                moveHistory.push({
+                    from: selectedSquare,
+                    to: squareId,
+                    captured: boardState[squareId]
+                });
+
+                boardState[squareId] = piece;
+                delete boardState[selectedSquare];
+
+                // Handle pawn promotion
+                if (piece.piece === "♙" && (squareId.endsWith("8") || squareId.endsWith("1"))) {
+                    piece.piece = "♕";
+                }
+
+                selectedSquare = null;
+                createBoard();
+            }
+        } else if (boardState[squareId]) {
+            selectedSquare = squareId;
+            createBoard();
+
+            // Highlight the selected square
+            document.getElementById(squareId).classList.add("highlight");
+        }
+    }
+
+    undoButton.addEventListener("click", () => {
+        const lastMove = moveHistory.pop();
+        if (lastMove) {
+            boardState[lastMove.from] = boardState[lastMove.to];
+            if (lastMove.captured) {
+                boardState[lastMove.to] = lastMove.captured;
+            } else {
+                delete boardState[lastMove.to];
+            }
+            createBoard();
+        }
+    });
+
+    createBoard();
+</script>
+
+</body>
+</html>
